@@ -111,7 +111,7 @@ def main() -> int:
     print(text, end="")
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(text, encoding="utf-8")
+        args.report.write_text(text, encoding="utf-8", newline="\n")
     return 1 if errors else 0
 
 
