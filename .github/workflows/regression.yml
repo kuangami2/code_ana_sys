@@ -27,6 +27,12 @@ jobs:
         run: |
           python scripts/check_sync_validation.py --report /tmp/sync-validation-report.json
           python -m unittest discover -s validation/tests -v
+      - name: Fetch pinned Redis and reproduce both benchmarks
+        run: |
+          git clone --depth 1 --branch 7.2.4 https://github.com/redis/redis.git third_party/redis
+          test "$(git -C third_party/redis rev-parse HEAD)" = "d2c8a4b91e8c0e6aefd1f5bc0bf582cddbe046b7"
+          python scripts/reproduce_validation.py
+          git diff --exit-code -- validation/benchmarks validation/results
       - uses: actions/upload-artifact@v4
         with:
           name: sync-validation-report
