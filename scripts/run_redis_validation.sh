@@ -20,6 +20,12 @@ assert {Path(x['file']).name for x in selected} == scope
 for unit in selected:
     # Preserve captured flags while making relative source/include paths resolvable.
     unit['arguments'][0] = 'clang'
+    args = unit['arguments']
+    for i, arg in enumerate(args):
+        if arg.endswith('.c') and not arg.startswith('-'):
+            args[i] = str((Path(unit['directory']) / arg).resolve())
+        elif arg.startswith('-I') and len(arg) > 2:
+            args[i] = '-I' + str((Path(unit['directory']) / arg[2:]).resolve())
     unit['arguments'][1:1] = ['-working-directory', unit['directory']]
 Path('demo/redis/compile_commands.json').write_text(json.dumps(selected, indent=2)+'\n')
 Path('demo/redis/build-provenance.json').write_text(json.dumps({
