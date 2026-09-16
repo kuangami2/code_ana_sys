@@ -8,18 +8,23 @@ fi
 test "$(git -C third_party/redis rev-parse HEAD)" = "$redis_commit"
 mkdir -p demo/redis
 bear --output "$PWD/demo/redis/compile_commands.full.json" -- \
-  make -C third_party/redis -j2 CC=clang MALLOC=libc OPTIMIZATION=-O0 BUILD_TLS=no
+  make -C third_party/redis -j2 CC=/usr/bin/clang MALLOC=libc OPTIMIZATION=-O0 BUILD_TLS=no
 python - <<'PY'
 import json
 from pathlib import Path
 full = json.loads(Path('demo/redis/compile_commands.full.json').read_text())
 scope = {'ae.c', 'bio.c', 'lazyfree.c', 'networking.c', 't_string.c', 'db.c', 'adlist.c', 'dict.c'}
-selected = [x for x in full if Path(x['file']).name in scope and '/src/' in x['file']]
+selected = [x for x in full if Path(x['file']).name in scope and '/src/' in x['file']
+            and '-cc1' not in x.get('arguments', [])]
 assert {Path(x['file']).name for x in selected} == scope
+for unit in selected:
+    # Preserve captured flags while making relative source/include paths resolvable.
+    unit['arguments'][0] = 'clang'
+    unit['arguments'][1:1] = ['-working-directory', unit['directory']]
 Path('demo/redis/compile_commands.json').write_text(json.dumps(selected, indent=2)+'\n')
 Path('demo/redis/build-provenance.json').write_text(json.dumps({
     'repository': 'redis/redis', 'commit': 'd2c8a4b91e8c0e6aefd1f5bc0bf582cddbe046b7',
-    'build': 'make CC=clang MALLOC=libc OPTIMIZATION=-O0 BUILD_TLS=no',
+    'build': 'make CC=/usr/bin/clang MALLOC=libc OPTIMIZATION=-O0 BUILD_TLS=no',
     'capture': 'bear', 'full_translation_units': len(full), 'analyzed_translation_units': len(selected),
     'scope': sorted(scope), 'scope_note': 'Full Redis build, eight selected real translation units analyzed; not whole-program coverage.'
 }, indent=2)+'\n')
